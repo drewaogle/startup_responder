@@ -6,13 +6,18 @@ set -e
 echo "Starting Ping Attempt"
 
 PING_URL="http://stats:5000/ping"
+# tracks # of pings
 PING_COUNT_FILE="/tmp/ping_count"
+# tracks last ping
 LAST_USAGE_FILE="/tmp/ping_date"
-PING_DIFF_SEC=$(( 60*60 ))
+# tracks when container started.
+UPTIME_FILE="/tmp/container_start"
+# ping diff sec - amount of time between last ping before trying ping again.
+# this ensures a max rate on pings.
+PING_DIFF_SEC=$(( 60*60 )) # 1 hr
 PING_DIFF_SEC=$(( 30 ))
 
-NO_USAGE=${NO_USAGE-}
-
+CUR_UPTIME=$(printf "%0.0f" "$(cat /proc/uptime | cut -d' ' -f1)")
 CURRENT_TIME=$( date +%s )
 # cacluated
 UPTIME_SEC=
@@ -32,6 +37,13 @@ if [ -e ${LAST_USAGE_FILE} ]; then
 else
     UPTIME_SEC=0
     DUE_FOR_PING=1
+fi
+
+if [ -e "${UPTIME_FILE}" ]; then
+    UPTIME_SEC=$(( $CUR_UPTIME - $(cat "${UPTIME_FILE}") ))
+else
+    UPTIME_SEC=0
+    echo "$CUR_UPTIME" > "${UPTIME_FILE}"
 fi
 
 if [ -e ${PING_COUNT_FILE} ]; then
